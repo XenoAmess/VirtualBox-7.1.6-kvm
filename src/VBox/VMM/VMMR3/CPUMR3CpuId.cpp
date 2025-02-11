@@ -1344,6 +1344,13 @@ static int cpumR3CpuIdSanitize(PVM pVM, PCPUM pCpum, PCPUMCPUIDCONFIG pConfig)
     ((enmConfig) && ((enmConfig) == CPUMISAEXTCFG_ENABLED_ALWAYS || (fHostFeature)) && (fAndExpr) ? (fConst) : 0)
 #define PASSTHRU_FEATURE_TODO(enmConfig, fConst) ((enmConfig) ? (fConst) : 0)
 
+#ifdef VBOX_WITH_KVM
+#define PASSTHRU_FEATURE_KVM_ONLY(fConst) (fConst)
+#else
+#define PASSTHRU_FEATURE_KVM_ONLY(fConst) (0)
+#endif
+
+
     /* Cpuid 1:
      * EAX: CPU model, family and stepping.
      *
@@ -1603,7 +1610,7 @@ static int cpumR3CpuIdSanitize(PVM pVM, PCPUM pCpum, PCPUMCPUIDCONFIG pConfig)
                                | X86_CPUID_AMD_FEATURE_EDX_MMX
                                | X86_CPUID_AMD_FEATURE_EDX_FXSR
                                | X86_CPUID_AMD_FEATURE_EDX_FFXSR
-                               //| X86_CPUID_EXT_FEATURE_EDX_PAGE1GB
+                               | PASSTHRU_FEATURE_KVM_ONLY(X86_CPUID_EXT_FEATURE_EDX_PAGE1GB)
                                | X86_CPUID_EXT_FEATURE_EDX_RDTSCP
                                //| RT_BIT_32(28)                    - reserved
                                //| X86_CPUID_EXT_FEATURE_EDX_LONG_MODE - turned on when necessary
@@ -1865,9 +1872,9 @@ static int cpumR3CpuIdSanitize(PVM pVM, PCPUM pCpum, PCPUMCPUIDCONFIG pConfig)
                                //| X86_CPUID_STEXT_FEATURE_EBX_HLE               RT_BIT(4)
                                | PASSTHRU_FEATURE(pConfig->enmAvx2, pHstFeat->fAvx2, X86_CPUID_STEXT_FEATURE_EBX_AVX2)
                                | X86_CPUID_STEXT_FEATURE_EBX_FDP_EXCPTN_ONLY
-                               //| X86_CPUID_STEXT_FEATURE_EBX_SMEP              RT_BIT(7)
+                               | PASSTHRU_FEATURE_KVM_ONLY(X86_CPUID_STEXT_FEATURE_EBX_SMEP)
                                | X86_CPUID_STEXT_FEATURE_EBX_BMI2
-                               //| X86_CPUID_STEXT_FEATURE_EBX_ERMS              RT_BIT(9)
+                               | PASSTHRU_FEATURE_KVM_ONLY(X86_CPUID_STEXT_FEATURE_EBX_ERMS)
                                | PASSTHRU_FEATURE(pConfig->enmInvpcid, pHstFeat->fInvpcid, X86_CPUID_STEXT_FEATURE_EBX_INVPCID)
                                //| X86_CPUID_STEXT_FEATURE_EBX_RTM               RT_BIT(11)
                                //| X86_CPUID_STEXT_FEATURE_EBX_PQM               RT_BIT(12)
@@ -1879,10 +1886,11 @@ static int cpumR3CpuIdSanitize(PVM pVM, PCPUM pCpum, PCPUMCPUIDCONFIG pConfig)
                                | PASSTHRU_FEATURE_TODO(pConfig->enmRdSeed, X86_CPUID_STEXT_FEATURE_EBX_RDSEED)
                                | PASSTHRU_FEATURE(pConfig->enmAdx, pHstFeat->fAdx, X86_CPUID_STEXT_FEATURE_EBX_ADX)
                                //| X86_CPUID_STEXT_FEATURE_EBX_SMAP              RT_BIT(20)
+                               | PASSTHRU_FEATURE_KVM_ONLY(X86_CPUID_STEXT_FEATURE_EBX_SMAP)
                                //| RT_BIT(21) - reserved
                                //| RT_BIT(22) - reserved
                                | PASSTHRU_FEATURE(pConfig->enmCLFlushOpt, pHstFeat->fClFlushOpt, X86_CPUID_STEXT_FEATURE_EBX_CLFLUSHOPT)
-                               //| RT_BIT(24) - reserved
+                               | PASSTHRU_FEATURE_KVM_ONLY(X86_CPUID_STEXT_FEATURE_EBX_CLWB)
                                //| X86_CPUID_STEXT_FEATURE_EBX_INTEL_PT          RT_BIT(25)
                                //| X86_CPUID_STEXT_FEATURE_EBX_AVX512PF          RT_BIT(26)
                                //| X86_CPUID_STEXT_FEATURE_EBX_AVX512ER          RT_BIT(27)
@@ -1893,18 +1901,21 @@ static int cpumR3CpuIdSanitize(PVM pVM, PCPUM pCpum, PCPUMCPUIDCONFIG pConfig)
                                ;
                 pCurLeaf->uEcx &= 0
                                //| X86_CPUID_STEXT_FEATURE_ECX_PREFETCHWT1 - we do not do vector functions yet.
+                               | PASSTHRU_FEATURE_KVM_ONLY(X86_CPUID_STEXT_FEATURE_ECX_GFNI)
                                ;
                 pCurLeaf->uEdx &= 0
+                               | PASSTHRU_FEATURE_KVM_ONLY(X86_CPUID_STEXT_FEATURE_EDX_FSRM)
+                               | PASSTHRU_FEATURE_KVM_ONLY(X86_CPUID_STEXT_FEATURE_EDX_SERIALIZE)
                                //| X86_CPUID_STEXT_FEATURE_EDX_SRBDS_CTRL        RT_BIT(9)
                                | PASSTHRU_FEATURE(pConfig->enmMdsClear,   pHstFeat->fMdsClear, X86_CPUID_STEXT_FEATURE_EDX_MD_CLEAR)
                                //| X86_CPUID_STEXT_FEATURE_EDX_TSX_FORCE_ABORT   RT_BIT_32(11)
                                //| X86_CPUID_STEXT_FEATURE_EDX_CET_IBT           RT_BIT(20)
-                               //| X86_CPUID_STEXT_FEATURE_EDX_IBRS_IBPB         RT_BIT(26)
-                               //| X86_CPUID_STEXT_FEATURE_EDX_STIBP             RT_BIT(27)
+                               | PASSTHRU_FEATURE_KVM_ONLY(X86_CPUID_STEXT_FEATURE_EDX_IBRS_IBPB)
+                               | PASSTHRU_FEATURE_KVM_ONLY(X86_CPUID_STEXT_FEATURE_EDX_STIBP)
                                | PASSTHRU_FEATURE(pConfig->enmFlushCmdMsr, pHstFeat->fFlushCmd, X86_CPUID_STEXT_FEATURE_EDX_FLUSH_CMD)
                                | PASSTHRU_FEATURE(pConfig->enmArchCapMsr,  pHstFeat->fArchCap,  X86_CPUID_STEXT_FEATURE_EDX_ARCHCAP)
                                //| X86_CPUID_STEXT_FEATURE_EDX_CORECAP           RT_BIT_32(30)
-                               //| X86_CPUID_STEXT_FEATURE_EDX_SSBD              RT_BIT_32(31)
+                               | PASSTHRU_FEATURE_KVM_ONLY(X86_CPUID_STEXT_FEATURE_EDX_SSBD)
                                ;
 
                 /* Mask out INVPCID unless FSGSBASE is exposed due to a bug in Windows 10 SMP guests, see @bugref{9089#c15}. */
@@ -2933,6 +2944,7 @@ static int cpumR3CpuIdReadConfig(PVM pVM, PCPUMCPUIDCONFIG pConfig, PCFGMNODE pC
         AssertLogRelRCReturn(rc, rc);
         if (pConfig->fNestedHWVirt)
         {
+#ifndef VBOX_WITH_KVM_NESTING
             /** @todo Think about enabling this later with NEM/KVM. */
             if (VM_IS_NEM_ENABLED(pVM))
             {
@@ -2942,6 +2954,7 @@ static int cpumR3CpuIdReadConfig(PVM pVM, PCPUMCPUIDCONFIG pConfig, PCFGMNODE pC
             else if (!fNestedPagingAndFullGuestExec)
                 return VMSetError(pVM, VERR_CPUM_INVALID_HWVIRT_CONFIG, RT_SRC_POS,
                                   "Cannot enable nested VT-x/AMD-V without nested-paging and unrestricted guest execution!\n");
+#endif
         }
     }
 
@@ -3888,6 +3901,7 @@ VMMR3_INT_DECL(void) CPUMR3SetGuestCpuIdFeature(PVM pVM, CPUMCPUIDFEATURE enmFea
          * Note! ASSUMES CPUMCPUIDFEATURE_APIC is called first.
          */
         case CPUMCPUIDFEATURE_X2APIC:
+#ifndef VBOX_WITH_KVM
             pLeaf = cpumCpuIdGetLeaf(pVM, UINT32_C(0x00000001));
             if (pLeaf)
                 pVM->cpum.s.aGuestCpuIdPatmStd[1].uEcx = pLeaf->uEcx |= X86_CPUID_FEATURE_ECX_X2APIC;
@@ -3902,6 +3916,7 @@ VMMR3_INT_DECL(void) CPUMR3SetGuestCpuIdFeature(PVM pVM, CPUMCPUIDFEATURE enmFea
             }
 
             LogRel(("CPUM: SetGuestCpuIdFeature: Enabled x2APIC\n"));
+#endif
             break;
 
         /*

@@ -202,6 +202,8 @@
 #define GIM_HV_HINT_INT_FOR_MBEC_SYSCALLS                   RT_BIT(13)
 /** Recommend using enlightened VMCS interfacea and nested enlightenments. */
 #define GIM_HV_HINT_NESTED_ENLIGHTENED_VMCS_INTERFACE       RT_BIT(14)
+/** Indicates that core-sharing is not possible. */
+#define GIM_HV_HINT_NO_NONARCH_CORESHARING                  RT_BIT(18)
 /** @}  */
 
 
@@ -1116,6 +1118,15 @@ AssertCompileSize(GIMHVEXTGETBOOTZEROMEM, 4088);
 AssertCompile(sizeof(GIMHVEXTGETBOOTZEROMEM) <= GIM_HV_PAGE_SIZE);
 /** @} */
 
+
+/** Hyper-V page size.  */
+#define GIM_HV_PAGE_SIZE                          4096
+/** Hyper-V page shift. */
+#define GIM_HV_PAGE_SHIFT                         12
+
+/** Microsoft Hyper-V vendor signature. */
+#define GIM_HV_VENDOR_MICROSOFT                   "Microsoft Hv"
+#define GIM_HV_VENDOR_VBOX                        "VBoxVBoxVBox"
 
 /**
  * MMIO2 region indices.

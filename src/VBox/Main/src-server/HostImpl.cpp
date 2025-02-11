@@ -82,6 +82,8 @@
 # include <errno.h>
 # include <net/if.h>
 # include <net/if_arp.h>
+# include <fcntl.h>
+# include <unistd.h>
 #endif /* RT_OS_LINUX */
 
 #ifdef RT_OS_SOLARIS

@@ -1678,6 +1678,19 @@ ifdef VBOX_HEADLESS
 endif
 
 #
+# Configure VirtualBox to use the KVM NEM backend.
+#
+ifdef VBOX_WITH_KVM
+ VBOX_WITH_DRIVERLESS_FORCED = 1
+ VBOX_WITH_NATIVE_NEM=1
+ # KVM doesn't need the VirtualBox Ring 0 drivers
+ VBOX_WITH_VBOXDRV=
+ VBOX_WITH_NETFLT=
+ VBOX_WITH_NETFLT_CROSSBOW=
+ VBOX_WITH_NETADP=
+endif
+
+#
 # Undefined VBOX_WITH_MAIN implies exclusion of a few more items.
 #
 ifndef VBOX_WITH_MAIN
@@ -2142,6 +2155,14 @@ ifdef VBOX_WITH_PARFAIT
 endif
 ifdef VBOX_WITH_STATIC_ARM64_PAGE_SHIFT
  DEFS.linux.arm64 += IPRT_STATIC_ARM64_PAGE_SHIFT=$(VBOX_WITH_STATIC_ARM64_PAGE_SHIFT)
+endif
+CYBERUS_CXX_FLAGS = -Werror -Wall
+ifdef VBOX_WITH_KVM
+ DEFS += VBOX_WITH_KVM
+ DEFS += VBOX_WITH_KVM_NESTING
+endif
+ifndef VBOX_HEADLESS
+ DEFS += VBOX_WITH_GVT_RENDERING
 endif
 
 # Don't flood CDEFS, old MASMs doesn't like too many defines.
@@ -3682,6 +3703,8 @@ ifndef VBOX_GCC_std
   VBOX_GCC_std := -std=c++17
   # else if "$(VBOX_CLANG_VERSION_CXX)" vge 60000 # Most language features complete by v6. Lib stuff was less complete in v6, but hopefully acceptable for out purposes.
   #VBOX_GCC_std := -std=c++17
+ else if "$(VBOX_WITH_KVM)" veq 1
+  VBOX_GCC_std := -std=c++17
  else if "$(VBOX_CLANG_VERSION_CXX)" vge 50000 # darwin Xcode 5 allegedly knows what C++11 is
   VBOX_GCC_std := -std=c++11
   # else if "$(VBOX_GCC_VERSION_CXX)" vge 70000 # Language feature P0512R0 was v8, rest v7 or earlier. Most lib stuff present in 7, complete in v12.

@@ -420,6 +420,7 @@ static int nemR3LnxInitCheckCapabilities(PVM pVM, PRTERRINFO pErrInfo)
 
 
 /** @callback_method_impl{FNVMMEMTRENDEZVOUS}   */
+#ifndef VBOX_WITH_KVM
 static DECLCALLBACK(VBOXSTRICTRC) nemR3LnxFixThreadPoke(PVM pVM, PVMCPU pVCpu, void *pvUser)
 {
     RT_NOREF(pVM, pvUser);
@@ -427,7 +428,97 @@ static DECLCALLBACK(VBOXSTRICTRC) nemR3LnxFixThreadPoke(PVM pVM, PVMCPU pVCpu, v
     AssertLogRelRC(rc);
     return VINF_SUCCESS;
 }
+#else
+static VBOXSTRICTRC nemR3LnxSetVCpuSignalMask(PVMCPU pVCpu, sigset_t *pSigset)
+{
+    /*
+     * glibc and Linux/KVM do not agree on the size of sigset_t.
+     */
+    constexpr size_t kernel_sigset_size = 8;
 
+    alignas(kvm_signal_mask) char backing[sizeof(kvm_signal_mask) + kernel_sigset_size];
+    kvm_signal_mask *pKvmSignalMask = reinterpret_cast<kvm_signal_mask *>(backing);
+
+    static_assert(sizeof(sigset_t) >= kernel_sigset_size);
+
+    pKvmSignalMask->len = kernel_sigset_size;
+    memcpy(pKvmSignalMask->sigset, pSigset, kernel_sigset_size);
+
+    int rc = ioctl(pVCpu->nem.s.fdVCpu, KVM_SET_SIGNAL_MASK, pKvmSignalMask);
+    AssertLogRelMsgReturn(rc == 0, ("Failed to set vCPU signal mask: %d", errno),
+                          VERR_NEM_INIT_FAILED);
+
+    return VINF_SUCCESS;
+}
+
+static DECLCALLBACK(VBOXSTRICTRC) nemR3LnxFixThreadPoke(PVM pVM, PVMCPU pVCpu, void *pvUser)
+{
+    RT_NOREF(pVM, pvUser);
+
+    int iPokeSignal = RTThreadPokeSignal();
+    AssertReturn(iPokeSignal >= 0, VERR_NEM_INIT_FAILED);
+
+    /* We disable the poke signal for the host. We never want that signal to be delivered. */
+    int rc = RTThreadControlPokeSignal(pVCpu->hThread, false /*fEnable*/);
+    AssertLogRelRC(rc);
+
+    sigset_t sigset;
+
+    /* Fetch the current signal mask. */
+    int rcProcMask = pthread_sigmask(SIG_BLOCK /* ignored */, nullptr, &sigset);
+    AssertLogRelMsgReturn(rcProcMask == 0, ("Failed to retrieve thread signal mask"), VERR_NEM_INIT_FAILED);
+
+    sigdelset(&sigset, iPokeSignal);
+
+    /* We enable the poke signal for the vCPU. Any poke will kick the vCPU out of guest execution. */
+    VBOXSTRICTRC rcVcpuMask = nemR3LnxSetVCpuSignalMask(pVCpu, &sigset);
+    AssertRCSuccessReturn(rcVcpuMask, rcVcpuMask);
+
+    /* Create a timer that delivers the poke signal. */
+    struct sigevent sev {};
+
+    sev.sigev_notify = SIGEV_THREAD_ID;
+    sev.sigev_signo = iPokeSignal;
+    sev._sigev_un._tid = gettid();
+
+    int rcTimer = timer_create(CLOCK_MONOTONIC, &sev, &pVCpu->nem.s.pTimer);
+    AssertLogRelMsgReturn(rcTimer == 0, ("Failed to create timer: %d", errno), VERR_NEM_INIT_FAILED);
+
+    return VINF_SUCCESS;
+}
+#endif
+
+
+#ifdef VBOX_WITH_KVM
+/**
+ * Check common environment problems and inform the user about misconfigurations.
+ */
+int nemR3CheckEnvironment(void)
+{
+    static const char szSplitLockMitigationFile[] = "/proc/sys/kernel/split_lock_mitigate";
+
+    char buf[64] {};
+    int fd = open(szSplitLockMitigationFile, O_RDONLY | O_CLOEXEC);
+
+    // Older kernels might not have this. A hard error feels unjustified here.
+    AssertLogRelMsgReturn(fd >= 0, ("Failed to check %s (%d). Assuming there is no problem.\n", szSplitLockMitigationFile, fd),
+                          VINF_SUCCESS);
+
+    /* Leave one character to ensure that the string is zero-terminated. */
+    ssize_t bytes = read(fd, buf, sizeof(buf) - 1);
+    AssertLogRelMsgReturn(bytes >= 0, ("Failed to read %s (%zd)\n", szSplitLockMitigationFile, bytes),
+                          VERR_NEM_INIT_FAILED);
+
+    int mitigationStatus = atoi(buf);
+
+    if (mitigationStatus != 0) {
+        LogRel(("NEM: WARNING: %s is %d. This can cause VM hangs, unless you set split_lock_detect=off on the host kernel command line! Please set it to 0.\n",
+                szSplitLockMitigationFile, mitigationStatus));
+    }
+
+    return VINF_SUCCESS;
+}
+#endif
 
 /**
  * Try initialize the native API.
@@ -445,6 +536,12 @@ static DECLCALLBACK(VBOXSTRICTRC) nemR3LnxFixThreadPoke(PVM pVM, PVMCPU pVCpu, v
 int nemR3NativeInit(PVM pVM, bool fFallback, bool fForced)
 {
     RT_NOREF(pVM, fFallback, fForced);
+
+#ifdef VBOX_WITH_KVM
+    int rcCheck = nemR3CheckEnvironment();
+    AssertLogRelMsgReturn(RT_SUCCESS(rcCheck), ("Failed to check environment\n"), VERR_NEM_INIT_FAILED);
+#endif
+
     /*
      * Some state init.
      */
@@ -631,6 +728,10 @@ int nemR3NativeTerm(PVM pVM)
         close(pVM->nem.s.fdKvm);
         pVM->nem.s.fdKvm = -1;
     }
+
+#ifdef VBOX_WITH_KVM
+    pVM->nem.s.pARedirectionTable.reset();
+#endif
     return VINF_SUCCESS;
 }
 
@@ -642,7 +743,22 @@ int nemR3NativeTerm(PVM pVM)
  */
 void nemR3NativeReset(PVM pVM)
 {
+#ifndef VBOX_WITH_KVM
     RT_NOREF(pVM);
+#else
+    pVM->nem.s.pARedirectionTable->fill(std::nullopt);
+
+    for (VMCPUID idCpu = 0; idCpu < pVM->cCpus; idCpu++)
+    {
+        PVMCPU pVCpu = pVM->apCpusR3[idCpu];
+
+        struct kvm_mp_state mp;
+        mp.mp_state = pVCpu->idCpu == 0 ? KVM_MP_STATE_RUNNABLE : KVM_MP_STATE_UNINITIALIZED;
+
+        int rcLnx = ioctl(pVCpu->nem.s.fdVCpu, KVM_SET_MP_STATE, &mp);
+        AssertLogRelMsg(rcLnx == 0, ("nemR3NativeReset: Failed to set MP state. Error: %d, errno %d\n", rcLnx, errno));
+    }
+#endif
 }
 
 
