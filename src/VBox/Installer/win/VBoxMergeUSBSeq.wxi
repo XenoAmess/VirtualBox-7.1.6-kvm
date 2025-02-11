@@ -1,0 +1,51 @@
+﻿<!--
+    VirtualBox Windows Installation Script (WiX)
+-->
+<!--
+    Copyright (C) 2014-2024 Oracle and/or its affiliates.
+
+    This file is part of VirtualBox base platform packages, as
+    available from https://www.virtualbox.org.
+
+    This program is free software; you can redistribute it and/or
+    modify it under the terms of the GNU General Public License
+    as published by the Free Software Foundation, in version 3 of the
+    License.
+
+    This program is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, see <https://www.gnu.org/licenses>.
+
+    SPDX-License-Identifier: GPL-3.0-only
+-->
+
+<Include xmlns="http://wixtoolset.org/schemas/v4/wxs">
+
+    <Custom Action="ca_VBoxUSBDevDrvInstArgFlagSilent" Before="ca_VBoxUSBDevDrvInstArgFlagForce" Condition="NOT REMOVE" />
+    <Custom Action="ca_VBoxUSBDevDrvInstArgFlagForce" Before="ca_VBoxUSBDevDrvInstArgModel" Condition="NOT REMOVE" />
+    <Custom Action="ca_VBoxUSBDevDrvInstArgModel" Before="ca_VBoxUSBDevDrvInstArgInfFile" Condition="NOT REMOVE" />
+    <Custom Action="ca_VBoxUSBDevDrvInstArgInfFile" Before="ca_VBoxUSBDevDrvInst" Condition="NOT REMOVE" />
+    <Custom Action="ca_VBoxUSBDevDrvInst" After="InstallFinalize" Condition="NOT REMOVE" />
+
+    <Custom Action="ca_VBoxUSBDevDrvUninstArgModel" Before="ca_VBoxUSBDevDrvUninst"
+            Condition="NOT (UPGRADINGPRODUCTCODE) AND (Installed) AND (REMOVE=&quot;ALL&quot;)" />
+    <Custom Action="ca_VBoxUSBDevDrvUninst" After="InstallInitialize"
+            Condition="NOT (UPGRADINGPRODUCTCODE) AND (Installed) AND (REMOVE=&quot;ALL&quot;)"/>
+
+    <Custom Action="ca_VBoxUSBMonDrvInstArgFlagSilent" Before="ca_VBoxUSBMonDrvInstArgFlagForce" Condition="NOT REMOVE" />
+    <Custom Action="ca_VBoxUSBMonDrvInstArgFlagForce" Before="ca_VBoxUSBMonDrvInstArgModel" Condition="NOT REMOVE" />
+    <Custom Action="ca_VBoxUSBMonDrvInstArgModel" Before="ca_VBoxUSBMonDrvInstArgInfFile" Condition="NOT REMOVE" />
+    <Custom Action="ca_VBoxUSBMonDrvInstArgInfFile" Before="ca_VBoxUSBMonDrvInst" Condition="NOT REMOVE" />
+    <Custom Action="ca_VBoxUSBMonDrvInst" After="InstallFinalize" Condition="NOT REMOVE" />
+
+    <Custom Action="ca_VBoxUSBMonDrvUninstArgModel" Before="ca_VBoxUSBMonDrvUninst"
+            Condition="NOT (UPGRADINGPRODUCTCODE) AND (Installed) AND (REMOVE=&quot;ALL&quot;)" />
+    <Custom Action="ca_VBoxUSBMonDrvUninst" After="InstallInitialize"
+            Condition="NOT (UPGRADINGPRODUCTCODE) AND (Installed) AND (REMOVE=&quot;ALL&quot;)" />
+
+</Include>
+

@@ -1,0 +1,47 @@
+﻿<!--
+    VirtualBox Windows Installation Script (WiX)
+-->
+<!--
+    Copyright (C) 2014-2024 Oracle and/or its affiliates.
+
+    This file is part of VirtualBox base platform packages, as
+    available from https://www.virtualbox.org.
+
+    This program is free software; you can redistribute it and/or
+    modify it under the terms of the GNU General Public License
+    as published by the Free Software Foundation, in version 3 of the
+    License.
+
+    This program is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, see <https://www.gnu.org/licenses>.
+
+    SPDX-License-Identifier: GPL-3.0-only
+-->
+
+<Include xmlns="http://wixtoolset.org/schemas/v4/wxs">
+
+    <CustomAction Id="ca_VBoxUSBDevDrvInst" DllEntry="DriverInstall" Execute="immediate" Return="check" Impersonate="no" BinaryRef="VBoxInstallHelper" />
+    <CustomAction Id="ca_VBoxUSBDevDrvInstArgInfFile"  Property="VBoxDrvInstInfFile" Value="[#file_VBoxUSB.inf]" Execute="immediate" />
+    <CustomAction Id="ca_VBoxUSBDevDrvInstArgModel" Property="VBoxDrvInstModel" Value="VBoxUSB*" Execute="immediate" />
+    <CustomAction Id="ca_VBoxUSBDevDrvInstArgFlagForce" Property="VBoxDrvInstFlagForce" Value="1" Execute="immediate" />
+    <CustomAction Id="ca_VBoxUSBDevDrvInstArgFlagSilent" Property="VBoxDrvInstFlagSilent" Value="1" Execute="immediate" />
+
+    <CustomAction Id="ca_VBoxUSBDevDrvUninst" DllEntry="DriverUninstall" Execute="immediate" Return="check" Impersonate="no" BinaryRef="VBoxInstallHelper" />
+    <CustomAction Id="ca_VBoxUSBDevDrvUninstArgModel" Property="VBoxDrvUninstModel" Value="VBoxUSB*" Execute="immediate" />
+
+    <CustomAction Id="ca_VBoxUSBMonDrvInst" DllEntry="DriverInstall" Execute="immediate" Return="check" Impersonate="no" BinaryRef="VBoxInstallHelper" />
+    <CustomAction Id="ca_VBoxUSBMonDrvInstArgInfFile"  Property="VBoxDrvInstInfFile" Value="[#file_VBoxUSBMon.inf]" Execute="immediate" />
+    <CustomAction Id="ca_VBoxUSBMonDrvInstArgModel" Property="VBoxDrvInstModel" Value="VBoxUSBMon*" Execute="immediate" />
+    <CustomAction Id="ca_VBoxUSBMonDrvInstArgFlagForce" Property="VBoxDrvInstFlagForce" Value="1" Execute="immediate" />
+    <CustomAction Id="ca_VBoxUSBMonDrvInstArgFlagSilent" Property="VBoxDrvInstFlagSilent" Value="1" Execute="immediate" />
+
+    <CustomAction Id="ca_VBoxUSBMonDrvUninst" DllEntry="DriverUninstall" Execute="immediate" Return="check" Impersonate="no" BinaryRef="VBoxInstallHelper" />
+    <CustomAction Id="ca_VBoxUSBMonDrvUninstArgModel" Property="VBoxDrvUninstModel" Value="VBoxUSBMon*" Execute="immediate" />
+
+</Include>
+
