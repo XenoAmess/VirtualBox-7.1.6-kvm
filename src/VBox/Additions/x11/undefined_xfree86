@@ -277,6 +277,7 @@ memcpy
 "memcpy",xf86memcpy
 memset
 "memset",xf86memset
+__memset_chk
 miAllocateGCPrivateIndex
 miChangeBorderWidth
 miChangeClip

@@ -3,6 +3,7 @@
 
 fbPictureInit
 fbScreenInit
+__memset_chk
 ShadowFBInit2
 vgaHWFreeHWRec
 vgaHWGetHWRec
