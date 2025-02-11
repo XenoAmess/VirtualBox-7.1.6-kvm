@@ -401,7 +401,7 @@ endif
 ## @{
 # This indicates that additions (of some kind or another) is being _built_.
 # VBOX_WITHOUT_ADDITIONS overrides it.
-VBOX_WITH_ADDITIONS = 1
+VBOX_WITH_ADDITIONS =
 # Build the optional ring-0 part of the additions for syntax checking.
 # On linux we build this as a test case instead.
 # Skip for darwin.arm64 for now.
